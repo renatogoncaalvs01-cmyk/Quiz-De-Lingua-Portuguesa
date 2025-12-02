@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz de Português - Gramática</title>
+    <!-- Carrega o Tailwind CSS CDN para estilização -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Cores base do código original */
+            --cor-facil: #DFFFD6;
+            --cor-medio: #FFF3D1;
+            --cor-dificil: #FFD6D6;
+            --cor-fundo: #F0F8FF;
+            --cor-botao-principal: #4E73DF;
+            --cor-texto: #333333;
+            /* Cores de feedback */
+            --cor-acerto: #4ade80; /* Tailwind green-400 */
+            --cor-erro: #f87171; /* Tailwind red-400 */
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--cor-fundo);
+            transition: background-color 0.5s ease;
+        }
+        .container {
+            max-width: 600px;
+            margin: auto;
+        }
+        .screen {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        /* Custom Button Style for better interaction */
+        .quiz-button {
+            transition: all 0.2s;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .quiz-button:not([disabled]):hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .answer-button-default {
+            background-color: #ffffff;
+            color: var(--cor-texto);
+        }
+        .answer-button-default:hover:not([disabled]) {
+             background-color: #f3f4f6;
+        }
+    </style>
+</head>
+<body id="body">
+
+    <div class="container p-4">
+
+        <!-- 1. Tela Inicial (Menu) -->
+        <div id="menu-screen" class="screen">
+            <h1 class="text-4xl font-extrabold mb-8 text-center" style="color: var(--cor-texto);">
+                🎓 Bem-vindo ao Quiz de Português!
+            </h1>
+            <div class="w-full space-y-4 max-w-sm">
+                <button onclick="escolher_nivel('Fácil')" class="w-full quiz-button py-4 text-white text-xl font-bold rounded-lg bg-green-500 hover:bg-green-600 transition duration-300">
+                    FÁCIL
+                </button>
+                <button onclick="escolher_nivel('Médio')" class="w-full quiz-button py-4 text-white text-xl font-bold rounded-lg bg-yellow-600 hover:bg-yellow-700 transition duration-300">
+                    MÉDIO
+                </button>
+                <button onclick="escolher_nivel('Difícil')" class="w-full quiz-button py-4 text-white text-xl font-bold rounded-lg bg-red-500 hover:bg-red-600 transition duration-300">
+                    DIFÍCIL
+                </button>
+            </div>
+        </div>
+
+        <!-- 2. Tela do Quiz (Oculta por padrão) -->
+        <div id="quiz-screen" class="screen hidden" style="background-color: var(--cor-fundo);">
+            <div class="w-full max-w-lg bg-white p-6 rounded-xl shadow-2xl">
+                <div id="stats" class="text-sm text-gray-600 mb-4 flex justify-between">
+                    <span id="contador-acertos">Acertos: 0</span>
+                    <span id="contador-erros">Erros: 0</span>
+                    <span id="contador-partidas">Partidas jogadas: 0</span>
+                </div>
+                
+                <h2 id="question-text" class="text-2xl font-semibold mb-6 text-center" style="color: var(--cor-texto);">
+                    Pergunta aqui
+                </h2>
+
+                <div id="answer-buttons-container" class="space-y-3">
+                    <!-- Botões de resposta serão injetados aqui -->
+                </div>
+
+                <p id="result-message" class="text-2xl font-bold text-center mt-6 h-8"></p>
+
+                <div class="mt-8 space-y-3">
+                    <button id="next-question-btn" onclick="nova_rodada()" disabled class="w-full quiz-button py-3 text-white font-semibold rounded-lg bg-blue-500 hover:bg-blue-600 transition duration-300 disabled:opacity-50">
+                        🎯 PRÓXIMA PERGUNTA
+                    </button>
+                    <button id="back-to-menu-btn" onclick="voltar_menu()" class="w-full quiz-button py-3 text-white font-semibold rounded-lg bg-gray-500 hover:bg-gray-600 transition duration-300">
+                        🔙 VOLTAR AO MENU
+                    </button>
+                    <button id="exit-game-btn" onclick="sair_do_jogo()" class="w-full quiz-button py-3 text-white font-semibold rounded-lg bg-gray-700 hover:bg-gray-800 transition duration-300">
+                        🚪 SAIR DO JOGO
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Tela Final (Oculta por padrão) -->
+        <div id="final-screen" class="screen hidden">
+            <div class="w-full max-w-lg bg-white p-8 rounded-xl shadow-2xl text-center">
+                <h2 class="text-3xl font-bold mb-6 text-gray-800">Fim do Jogo!</h2>
+                <p id="final-result-text" class="text-xl text-gray-700 whitespace-pre-line">
+                    Obrigado por jogar!
+                </p>
+                <button id="restart-btn" onclick="reiniciar_jogo()" class="w-full quiz-button mt-8 py-3 text-white font-bold rounded-lg bg-green-600 hover:bg-green-700 transition duration-300">
+                    🔁 REINICIAR JOGO
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Cores e estilos - Mapeamento para uso no JavaScript/CSS
+        const Cores = {
+            "Fácil": "var(--cor-facil)",
+            "Médio": "var(--cor-medio)",
+            "Difícil": "var(--cor-dificil)",
+            "Fundo": "var(--cor-fundo)",
+            "Botao": "var(--cor-botao-principal)",
+            "Texto": "var(--cor-texto)"
+        };
+
+        // Perguntas (Extraídas diretamente do código Python)
+        const dados_perguntas = {
+            "Fácil": [
+                "Qual é a classe gramatical da palavra 'alegremente'?;Advérbio;Adjetivo;Verbo;Substantivo",
+                "A palavra 'felicidade' é um exemplo de:;Substantivo;Verbo;Adjetivo;Conjunção",
+                "A palavra 'em' pertence a qual classe gramatical?;Preposição;Verbo;Advérbio;Artigo",
+                "A palavra 'mas' é uma:;Conjunção;Interjeição;Artigo;Substantivo",
+                "A palavra 'Ah!' é uma:;Interjeição;Advérbio;Conjunção;Preposição",
+                "A palavra 'o' em 'o menino chegou' é um:;Artigo;Verbo;Conjunção;Pronome",
+                "Qual palavra está escrita corretamente?;Enxergar;Enxergarh;Enchergar;Enxegar",
+                "Qual das palavras leva acento?;Pôde;Pode;Pude;Podo",
+                "Qual é o plural de 'animal'?;Animais;Animales;Animau;Animãos",
+                "Qual palavra completa: 'Eu ___ feliz'?;estou;esta;está;estamos",
+                "Qual é a classe da palavra 'cachorro'?;Substantivo;Verbo;Adjetivo;Conjunção",
+                "A palavra 'rápido' em 'carro rápido' é um:;Adjetivo;Verbo;Advérbio;Preposição",
+                "A palavra 'de' é uma:;Preposição;Verbo;Conjunção;Substantivo",
+                "'E' em 'João e Maria' é uma:;Conjunção;Artigo;Verbo;Substantivo",
+                "A palavra 'o' em 'o livro' é:;Artigo;Verbo;Adjetivo;Substantivo",
+                "A palavra 'aqui' é um:;Advérbio;Substantivo;Adjetivo;Verbo",
+                "'Ai!' é exemplo de:;Interjeição;Advérbio;Conjunção;Adjetivo",
+                "Qual dessas é um substantivo?;Casa;Rápido;Com;Ou",
+                "Qual dessas é um verbo?;Correr;Mesa;Bonito;Sim",
+                "Qual dessas é um advérbio?;Ontem;Mesa;Bonito;Gato",
+                "Qual palavra está com a ortografia correta?;Exceção;Execessão;Esceção;Exceçãoo",
+                "A palavra 'muito' é classificada como:;Advérbio;Verbo;Substantivo;Conjunção",
+                "Qual das palavras leva acento?;Fácil;Facil;Facíl;Faciil",
+                "Qual dessas é uma interjeição?;Oba!;Sim;Com;Bonito",
+                "O que é um artigo?;Palavra que acompanha o substantivo;Verbo no passado;Conjunção entre frases;Palavra que substitui verbo",
+                "A palavra 'azul' em 'carro azul' é:;Adjetivo;Verbo;Substantivo;Conjunção",
+                "'Mas' é um exemplo de:;Conjunção;Artigo;Adjetivo;Substantivo",
+                "A palavra 'em' pertence a qual classe?;Preposição;Verbo;Advérbio;Artigo",
+                "Qual destas palavras é uma preposição?;Com;Mesa;Correr;Lindo",
+                "A palavra 'não' é um:;Advérbio;Verbo;Substantivo;Conjunção",
+                "Qual é o antônimo de 'grande'?;Pequeno;Enorme;Largo;Comprido",
+                "A palavra 'bondade' é um:;Substantivo Abstrato;Substantivo Comum;Adjetivo;Verbo",
+                "Qual das palavras é um sinônimo de 'feliz'?;Contente;Triste;Bravo;Cansado",
+                "A palavra 'lentamente' indica:;Modo;Tempo;Lugar;Intensidade",
+                "Qual a vogal que completa a palavra 'c_sa'?;a;e;i;o",
+                "Quantas letras tem a palavra 'Brasil'?;Seis;Cinco;Sete;Quatro",
+                "Qual é a cor do cabelo de um elefante?;Nenhuma;Cinza;Preto;Marrom",
+                "O que a galinha bota?;Ovo;Leite;Mel;Carne",
+                "Qual destas é uma preposição simples?;Para;E;Mas;Ou",
+                "A palavra 'cantava' é um verbo no:;Passado;Presente;Futuro;Infinitivo"
+            ],
+            "Médio": [
+                "Qual é o sujeito da frase: 'O cachorro latiu a noite toda.'?;O cachorro;a noite toda;latiu;toda",
+                "Na frase 'Ela correu rapidamente', o termo 'rapidamente' é:;Adjunto adverbial;Adjunto adnominal;Sujeito;Predicado",
+                "Na frase 'O menino inteligente venceu a prova', o termo 'inteligente' é:;Adjunto adnominal;Aposto;Predicado;Adjunto adverbial",
+                "Qual está acentuada corretamente?;Júri;Juri;Jurí;Jurii",
+                "A palavra 'rápido' em 'ele corre rápido' é um:;Advérbio;Verbo;Adjetivo;Artigo",
+                "A palavra 'com' pertence a qual classe gramatical?;Preposição;Verbo;Substantivo;Conjunção",
+                "Qual é a função da palavra 'não' em 'Ele não foi à escola'?;Advérbio;Verbo;Substantivo;Conjunção",
+                "A palavra 'porém' é um exemplo de:;Conjunção adversativa;Advérbio;Pronome;Preposição",
+                "O termo 'as crianças' em 'As crianças brincavam' é:;Sujeito simples;Verbo;Objeto direto;Predicado",
+                "Na frase 'O menino correu', 'O menino' é o:;Sujeito;Verbo;Objeto direto;Adjunto adnominal",
+                "Em 'Ela canta bem', 'bem' é:;Advérbio;Verbo;Adjetivo;Artigo",
+                "'O cachorro bonito latiu' – 'bonito' é:;Adjetivo;Verbo;Substantivo;Preposição",
+                "Qual termo é essencial da oração?;Sujeito;Adjunto adnominal;Vocativo;Adjunto adverbial",
+                "Em 'Eles saíram ontem', 'ontem' é:;Adjunto adverbial;Adjunto adnominal;Objeto direto;Predicado",
+                "Em 'Ana, minha amiga, chegou', 'minha amiga' é:;Aposto;Vocativo;Adjunto;Sujeito",
+                "'Apesar de' é:;Locução prepositiva;Conjunção;Artigo;Verbo",
+                "A palavra 'com' é uma:;Preposição;Conjunção;Substantivo;Advérbio",
+                "'Rápido' em 'ele corre rápido' é:;Advérbio;Verbo;Adjetivo;Artigo",
+                "O termo 'muito' em 'muito bonita' é:;Advérbio;Substantivo;Verbo;Adjetivo",
+                "Qual é o objeto direto em 'Pedro chutou a bola'?;a bola;Pedro;chutou;bola",
+                "Acento correto:;Árvore;Arvore;Árvoré;Arvorê",
+                "'O menino leu o livro' – 'o livro' é:;Objeto direto;Sujeito;Verbo;Adjunto adverbial",
+                "Na frase 'Eles gostam de estudar', 'de estudar' é:;Objeto indireto;Objeto direto;Sujeito;Adjunto",
+                "O que é vocativo?;Chamamento;Sujeito;Predicado;Objeto direto",
+                "Em 'Comemos pizza ontem', 'ontem' é:;Adjunto adverbial;Objeto direto;Sujeito;Predicado",
+                "O termo 'muitas flores' em 'Ele deu muitas flores' é:;Objeto direto;Adjunto adverbial;Verbo;Aposto",
+                "'Com certeza' é uma:;Locução adverbial;Locução verbal;Interjeição;Preposição",
+                "Em 'Maria e João brincam', 'e' é:;Conjunção;Verbo;Preposição;Adjetivo",
+                "Em 'Ele correu com pressa', 'com pressa' é:;Adjunto adverbial;Objeto direto;Sujeito;Artigo",
+                "Na oração 'Choveu muito ontem', o sujeito é:;Inexistente;Simples;Composto;Oculto",
+                "Qual a função sintática de 'ao amigo' em 'Ele entregou o livro ao amigo'?;Objeto Indireto;Objeto Direto;Complemento Nominal;Adjunto Adverbial",
+                "A palavra 'escorrega' no sentido figurado é:;Escorregar;Enganar-se;Deslizar;Cair",
+                "Qual das alternativas apresenta um sujeito composto?;João e Maria viajaram.;Choveu muito.;Os cães latem.;Eu comi bolo.",
+                "Em 'Ele é **tão** alto **quanto** você', os termos destacados são:;Conjunções comparativas;Advérbios;Preposições;Pronomes",
+                "Qual a figura de linguagem em 'Fui ao médico para ver se estou vivo'?;Ironia;Metáfora;Comparação;Eufemismo",
+                "A vírgula é obrigatória em:;Vocativo;Sujeito composto;Objeto direto;Predicado verbal",
+                "Na frase 'Ainda que chova, irei', 'Ainda que chova' é uma oração:;Subordinada Adverbial Concessiva;Subordinada Adverbial Temporal;Subordinada Adverbial Causal;Subordinada Adverbial Condicional",
+                "Qual o predicado em 'O professor explicou a matéria com clareza'?;explicou a matéria com clareza;O professor;a matéria;com clareza",
+                "O que é um verbo de ligação?;Verbo que liga o sujeito ao predicativo;Verbo que indica ação;Verbo que indica estado;Verbo que liga duas orações"
+            ],
+            "Difícil": [
+                "Qual é o tipo de sujeito em 'Há muitos alunos na sala.'?;Inexistente;Simples;Oculto;Composto",
+                "Na frase 'Carlos, meu amigo, chegou.', 'meu amigo' é um:;Aposto;Vocativo;Adjunto;Predicativo",
+                "Em 'Pedro chamou Ana', qual é o objeto direto?;Ana;Pedro;chamou;chamar",
+                "A palavra 'embora' pode ser:;Conjunção;Preposição;Substantivo;Verbo",
+                "Qual termo exerce função de núcleo do sujeito?;Substantivo;Verbo;Advérbio;Conjunção",
+                "'Apesar de' é uma:;Locução prepositiva;Conjunção;Artigo;Advérbio",
+                "A frase 'Quando ele chegou, saímos' contém:;Orações subordinadas;Orações coordenadas;Período simples;Vocativo",
+                "Na frase 'Foi ele quem fez tudo', a palavra 'quem' é:;Pronome relativo;Conjunção;Substantivo;Artigo",
+                "Tipo de sujeito em 'Chove muito':;Inexistente;Simples;Oculto;Composto",
+                "'João, o médico, chegou' – 'o médico' é:;Aposto;Vocativo;Predicativo;Adjunto adnominal",
+                "'Fizemos tudo sozinhos' – 'sozinhos' é:;Predicativo;Adjetivo;Sujeito;Aposto",
+                "'Quem' em 'Foi ela quem fez' é:;Pronome relativo;Conjunção;Artigo;Verbo",
+                "Termo 'por que' em 'Por que você saiu?' é:;Pronome interrogativo;Conjunção;Preposição;Advérbio",
+                "Classificação de 'talvez' em 'Talvez chova':;Advérbio;Verbo;Conjunção;Substantivo",
+                "'Embora' em 'Embora cansado, foi' é:;Conjunção;Advérbio;Preposição;Substantivo",
+                "Função do termo 'triste' em 'Ele saiu triste':;Predicativo;Adjunto adverbial;Aposto;Verbo",
+                "'Aquela menina que chegou' – 'que' é:;Pronome relativo;Verbo;Artigo;Advérbio",
+                "Tipo de sujeito em 'Venderam tudo ontem':;Indeterminado;Simples;Inexistente;Composto",
+                "'Apesar de tudo' é:;Locução prepositiva;Locução adverbial;Conjunção;Adjetivo",
+                "'Segundo o autor' – 'Segundo' é:;Preposição;Verbo;Conjunção;Adjetivo",
+                "Função do termo 'felizes' em 'Eles estavam felizes':;Predicativo;Adjunto adverbial;Aposto;Sujeito",
+                "'Correr' em 'Gosto de correr' é:;Verbo no infinitivo;Substantivo;Adjetivo;Advérbio",
+                "'Orações subordinadas' aparecem em:;Frases dependentes;Frases coordenadas;Período simples;Predicados nominais",
+                "'Não' em 'Ele não correu' é:;Advérbio de negação;Conjunção;Preposição;Pronome",
+                "Função do termo 'rápido' em 'Ele é rápido':;Predicativo do sujeito;Adjunto;Objeto;Verbo",
+                "'Ela mesma fez' – 'mesma' é:;Pronome demonstrativo;Advérbio;Artigo;Conjunção",
+                "'O que me disse?' – 'que' é:;Pronome interrogativo;Advérbio;Conjunção;Substantivo",
+                "'Nem' em 'Nem ele sabia' é:;Conjunção;Advérbio;Verbo;Preposição",
+                "Qual é a classificação da oração subordinada em 'É necessário que você estude.'?;Subjetiva;Objetiva Direta;Objetiva Indireta;Completiva Nominal",
+                "Em 'Por mais que tentasse, não conseguiu', 'Por mais que' introduz uma oração:;Concessiva;Temporal;Causal;Condicional",
+                "A correta colocação pronominal em 'Me disseram a verdade' é:;Disseram-me a verdade;A verdade disseram-me;Me a verdade disseram;Disseram-a-me a verdade",
+                "Qual dos verbos abaixo é bitransitivo?;Informar;Chegar;Correr;Cantar",
+                "Identifique a oração subordinada adjetiva restritiva em:;Os alunos que estudam passam.;Os alunos, que estudam, passam.;Quando estudam, os alunos passam.;Para estudar, os alunos passam.",
+                "Em 'A casa, onde moro, é antiga', 'onde moro' é uma oração:;Subordinada Adjetiva Explicativa;Subordinada Adjetiva Restritiva;Subordinada Adverbial Temporal;Subordinada Substantiva Apositiva",
+                "Qual figura de linguagem consiste no emprego de uma palavra por outra, com sentido próximo, mas sem semelhança?;Metonímia;Metáfora;Comparação;Eufemismo",
+                "O que é anacoluto?;Quebra da estrutura sintática da frase;Repetição de palavras;Uso de palavras antigas;Erro de concordância",
+                "Em 'Ele era um bom orador, embora não falasse muito', a oração 'embora não falasse muito' é:;Subordinada Adverbial Concessiva;Subordinada Adverbial Conformativa;Subordinada Adverbial Causal;Subordinada Adverbial Temporal",
+                "Qual a função sintática de 'de livros' em 'A leitura de livros é fundamental'?;Complemento Nominal;Adjunto Adnominal;Objeto Indireto;Adjunto Adverbial",
+                "Qual o objeto indireto em 'Preciso de ajuda urgente.'?;de ajuda;ajuda;urgente;Preciso",
+                "A palavra 'onde' deve ser usada quando indica:;Lugar fixo;Tempo;Modo;Causa",
+                "Qual oração apresenta objeto direto preposicionado?;Ele obedeceu ao pai.;Gosto de frutas.;Necessitamos de silêncio.;Acredito em Deus.",
+                "O que é eufemismo?;Suavização de uma ideia;Exagero de uma ideia;Contradição de ideias;Repetição de uma ideia",
+                "Em 'Ele não veio por causa da chuva', 'por causa da chuva' é um:;Adjunto adverbial de causa;Adjunto adverbial de modo;Adjunto adnominal;Objeto indireto",
+                "Qual a função sintática de 'o bravo' em 'Chamaram-no de bravo'?;Predicativo do objeto;Objeto direto;Objeto indireto;Aposto",
+                "Em 'A verdade, ele sabia', 'a verdade' é um:;Objeto direto pleonástico;Sujeito;Objeto indireto;Aposto",
+                "Qual a classificação morfológica de 'cujo'?;Pronome relativo;Conjunção;Advérbio;Preposição",
+                "O que é síncope na fonética?;Supressão de fonemas no meio da palavra;Acrescentar fonemas;Alteração de fonemas;Inversão de fonemas",
+                "Qual oração tem sujeito oculto (elíptico)?;Comemos muito ontem.;Nevou na serra.;Venderam-se casas.;Faz calor."
+            ]
+        };
+
+        // Estado do Jogo
+        let acertos = 0;
+        let partidas = 0;
+        let erros = 0;
+        let nivel_atual = "Fácil";
+        let respostas_ja_usadas = {
+            "Fácil": [],
+            "Médio": [],
+            "Difícil": []
+        };
+        let respostas_embaralhadas = [];
+
+        // Referências DOM
+        const body = document.getElementById('body');
+        const menuScreen = document.getElementById('menu-screen');
+        const quizScreen = document.getElementById('quiz-screen');
+        const finalScreen = document.getElementById('final-screen');
+        const questionText = document.getElementById('question-text');
+        const answerButtonsContainer = document.getElementById('answer-buttons-container');
+        const resultMessage = document.getElementById('result-message');
+        const nextQuestionBtn = document.getElementById('next-question-btn');
+        const contadorAcertos = document.getElementById('contador-acertos');
+        const contadorErros = document.getElementById('contador-erros');
+        const contadorPartidas = document.getElementById('contador-partidas');
+        const finalResultText = document.getElementById('final-result-text');
+
+        // Função utilitária para embaralhar um array (Fisher-Yates)
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        /**
+         * Seleciona uma questão aleatória e garante que não se repita até que todas tenham sido usadas.
+         * @returns {string[]} [Pergunta, Resposta Correta, Errada 1, Errada 2, Errada 3]
+         */
+        function questao_aleatoria() {
+            let perguntas_disponiveis = dados_perguntas[nivel_atual].filter(p => !respostas_ja_usadas[nivel_atual].includes(p));
+
+            if (perguntas_disponiveis.length === 0) {
+                // Se todas as perguntas foram usadas, reseta o pool de respostas usadas
+                respostas_ja_usadas[nivel_atual] = [];
+                perguntas_disponiveis = dados_perguntas[nivel_atual].slice();
+            }
+
+            const pergunta = perguntas_disponiveis[Math.floor(Math.random() * perguntas_disponiveis.length)];
+            respostas_ja_usadas[nivel_atual].push(pergunta);
+            
+            return pergunta.split(";");
+        }
+
+        /**
+         * Inicia uma nova rodada: carrega a pergunta e as opções.
+         */
+        function nova_rodada() {
+            partidas++;
+            const questao = questao_aleatoria();
+            
+            questionText.textContent = questao[0];
+            
+            // Estrutura de respostas: [Texto, É Correta]
+            respostas_embaralhadas = [
+                { text: questao[1], isCorrect: true },
+                { text: questao[2], isCorrect: false },
+                { text: questao[3], isCorrect: false },
+                { text: questao[4], isCorrect: false }
+            ];
+            
+            shuffleArray(respostas_embaralhadas);
+
+            // Renderiza os botões de resposta
+            answerButtonsContainer.innerHTML = '';
+            respostas_embaralhadas.forEach((resposta, index) => {
+                const button = document.createElement('button');
+                button.textContent = `${String.fromCharCode(65 + index)}) ${resposta.text}`;
+                button.setAttribute('onclick', `responder(${index})`);
+                button.id = `answer-btn-${index}`;
+                button.className = 'w-full quiz-button py-3 text-lg font-semibold rounded-lg answer-button-default text-left px-4 transition duration-200';
+                answerButtonsContainer.appendChild(button);
+            });
+
+            // Resetar estado da rodada
+            resultMessage.textContent = "";
+            nextQuestionBtn.disabled = true;
+            
+            // Atualizar contadores
+            contadorPartidas.textContent = `Partidas jogadas: ${partidas}`;
+        }
+
+        /**
+         * Processa a resposta do usuário.
+         * @param {number} indice - O índice da resposta selecionada.
+         */
+        function responder(indice) {
+            const respostaSelecionada = respostas_embaralhadas[indice];
+            const isCorrect = respostaSelecionada.isCorrect;
+            const button = document.getElementById(`answer-btn-${indice}`);
+            
+            // Atualiza a cor do botão selecionado
+            button.classList.remove('answer-button-default');
+            button.style.backgroundColor = isCorrect ? 'var(--cor-acerto)' : 'var(--cor-erro)';
+            button.style.color = 'white';
+
+            if (isCorrect) {
+                acertos++;
+                resultMessage.textContent = "✅ VOCÊ ACERTOU!";
+                resultMessage.classList.remove('text-red-500');
+                resultMessage.classList.add('text-green-500');
+            } else {
+                erros++;
+                resultMessage.textContent = "❌ VOCÊ ERROU!";
+                resultMessage.classList.remove('text-green-500');
+                resultMessage.classList.add('text-red-500');
+
+                // Destaca a resposta correta
+                const indiceCorreto = respostas_embaralhadas.findIndex(r => r.isCorrect);
+                const correctButton = document.getElementById(`answer-btn-${indiceCorreto}`);
+                correctButton.style.backgroundColor = 'var(--cor-acerto)';
+                correctButton.style.color = 'white';
+                correctButton.classList.remove('answer-button-default');
+            }
+
+            // Desabilita todos os botões de resposta
+            answerButtonsContainer.querySelectorAll('button').forEach(btn => {
+                btn.disabled = true;
+                btn.classList.remove('hover:bg-gray-100');
+            });
+            
+            // Habilita o botão de próxima pergunta
+            nextQuestionBtn.disabled = false;
+
+            // Atualiza os contadores na UI
+            contadorAcertos.textContent = `Acertos: ${acertos}`;
+            contadorErros.textContent = `Erros: ${erros}`;
+        }
+
+        /**
+         * Configura o jogo para o nível escolhido.
+         * @param {string} nivel - 'Fácil', 'Médio' ou 'Difícil'.
+         */
+        function escolher_nivel(nivel) {
+            nivel_atual = nivel;
+            resetar_contadores();
+            
+            // Mudar cor de fundo baseado no nível
+            body.style.backgroundColor = Cores[nivel];
+
+            // Trocar telas
+            menuScreen.classList.add('hidden');
+            quizScreen.classList.remove('hidden');
+            
+            nova_rodada();
+        }
+
+        /**
+         * Volta para a tela de menu.
+         */
+        function voltar_menu() {
+            quizScreen.classList.add('hidden');
+            finalScreen.classList.add('hidden');
+            menuScreen.classList.remove('hidden');
+            body.style.backgroundColor = Cores["Fundo"];
+        }
+
+        /**
+         * Mostra a tela final com o resumo da pontuação.
+         */
+        function sair_do_jogo() {
+            quizScreen.classList.add('hidden');
+            finalScreen.classList.remove('hidden');
+            
+            const totalPerguntas = partidas;
+            const porcentagemAcertos = totalPerguntas > 0 ? ((acertos / totalPerguntas) * 100).toFixed(1) : 0;
+            
+            finalResultText.innerHTML = 
+                `Obrigado por jogar no nível **${nivel_atual}**!\n\n` +
+                `Total de Perguntas: ${totalPerguntas}\n` +
+                `✅ Acertos: ${acertos}\n` +
+                `❌ Erros: ${erros}\n` +
+                `**Aproveitamento: ${porcentagemAcertos}%**`;
+            
+            body.style.backgroundColor = Cores["Fundo"];
+        }
+
+        /**
+         * Reseta as variáveis de pontuação e as respostas usadas.
+         */
+        function resetar_contadores() {
+            acertos = 0;
+            erros = 0;
+            partidas = 0;
+            respostas_ja_usadas = { "Fácil": [], "Médio": [], "Difícil": [] };
+            
+            contadorAcertos.textContent = `Acertos: ${acertos}`;
+            contadorErros.textContent = `Erros: ${erros}`;
+            contadorPartidas.textContent = `Partidas jogadas: ${partidas}`;
+        }
+
+        /**
+         * Reinicia o jogo a partir da tela final (volta ao menu).
+         */
+        function reiniciar_jogo() {
+            voltar_menu(); // A função voltar_menu já oculta a tela final e mostra o menu
+        }
+    </script>
+</body>
+</html>
